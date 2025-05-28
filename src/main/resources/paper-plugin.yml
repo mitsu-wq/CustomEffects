@@ -1,0 +1,5 @@
+name: CustomEffects
+version: '0.1'
+main: me.deadybbb.customEffects.CustomEffects
+api-version: '1.20'
+authors: [ Ybbb ]
