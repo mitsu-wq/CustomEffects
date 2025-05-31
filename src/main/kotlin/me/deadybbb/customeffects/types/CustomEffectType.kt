@@ -1,17 +1,21 @@
 package me.deadybbb.customeffects.types
 
+import net.kyori.adventure.translation.Translatable
 import org.bukkit.NamespacedKey
 import org.jetbrains.annotations.NotNull
+import kotlin.String
 
-class CustomEffectType(
+abstract class CustomEffectType(
     private val name: String,
-    private val category: Category,
-    private val isInstant: Boolean = false
-) : EffectType {
-    private val key = NamespacedKey("customeffect", name.lowercase())
+    private val category: EffectCategory,
+    private val behavior: EffectBehavior,
+    private val namespace: String = "customeffect"
+) : EffectType, Translatable {
+    private val key = NamespacedKey(namespace, name.lowercase())
 
     init {
         require(name.matches(Regex("[a-z0-9_]+"))) { "Effect name must contain only lowercase letters, number, or underscores" }
+        require(namespace.matches(Regex("[a-z0-9_]+"))) { "Namespace name must contain only lowercase letters, number, or underscores" }
     }
 
     @NotNull
@@ -21,12 +25,13 @@ class CustomEffectType(
     override fun getName(): String = name
 
     @NotNull
-    override fun getCategory(): Category = category
-
-    override fun isInstant(): Boolean = isInstant
+    override fun getCategory(): EffectCategory = category
 
     @NotNull
-    override fun translationKey(): String = "effect.customeffect.$name"
+    override fun getBehavior(): EffectBehavior = behavior
+
+    @NotNull
+    override fun translationKey(): String = "effect.$namespace.$name"
 
     override fun equals(other: Any?): Boolean = other is CustomEffectType && key == other.key
 

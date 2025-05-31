@@ -3,8 +3,10 @@ package me.deadybbb.customeffects.types
 import me.deadybbb.customeffects.handlers.CustomEffectHandler
 import me.deadybbb.customeffects.handlers.HeartDrainEffectHandler
 import me.deadybbb.customeffects.handlers.HeartFillEffectHandler
+import me.deadybbb.customeffects.handlers.InstantEffectHandler
 import me.deadybbb.customeffects.handlers.InstantHeartDrainEffectHandler
 import me.deadybbb.customeffects.handlers.InstantHeartFillEffectHandler
+import me.deadybbb.customeffects.handlers.NonInstantEffectHandler
 import org.bukkit.NamespacedKey
 import org.bukkit.potion.PotionEffectType
 import org.jetbrains.annotations.NotNull
@@ -14,12 +16,11 @@ object EffectTypes {
     private val byKey = ConcurrentHashMap<NamespacedKey, EffectType>()
     private val byName = ConcurrentHashMap<String, EffectType>()
     private val handlers = ConcurrentHashMap<NamespacedKey, CustomEffectHandler>()
-    private var acceptingNew = true
 
-    val HEART_DRAIN = CustomEffectType(name = "heart_drain", category = Category.HARMFUL).also { registerEffectType(it, HeartDrainEffectHandler()) }
-    val HEART_FILL = CustomEffectType(name = "heart_fill", category = Category.BENEFICIAL).also { registerEffectType(it, HeartFillEffectHandler()) }
-    val INSTANT_HEART_DRAIN = CustomEffectType(name = "instant_heart_drain", category = Category.HARMFUL, isInstant = true).also { registerEffectType(it, InstantHeartDrainEffectHandler()) }
-    val INSTANT_HEART_FILL = CustomEffectType(name = "instant_heart_fill", category = Category.BENEFICIAL, isInstant = true).also { registerEffectType(it, InstantHeartFillEffectHandler()) }
+    val HEART_DRAIN = NonInstantEffectType.create(name = "heart_drain", category = EffectCategory.HARMFUL).also { registerEffectType(it, HeartDrainEffectHandler()) }
+    val HEART_FILL = NonInstantEffectType.create(name = "heart_fill", category = EffectCategory.BENEFICIAL).also { registerEffectType(it, HeartFillEffectHandler()) }
+    val INSTANT_HEART_DRAIN = InstantEffectType.create(name = "instant_heart_drain", category = EffectCategory.HARMFUL).also { registerEffectType(it, InstantHeartDrainEffectHandler()) }
+    val INSTANT_HEART_FILL = InstantEffectType.create(name = "instant_heart_fill", category = EffectCategory.BENEFICIAL).also { registerEffectType(it, InstantHeartFillEffectHandler()) }
 
     val SPEED = WrappedPotionEffectType(PotionEffectType.SPEED).also { registerEffectType(it) }
     val SLOW = WrappedPotionEffectType(PotionEffectType.SLOW).also { registerEffectType(it) }
@@ -59,14 +60,45 @@ object EffectTypes {
         if (byKey.containsKey(type.getKey()) || byName.containsKey(type.getName().lowercase())) {
             throw IllegalArgumentException("Effect with key ${type.getKey()} or name ${type.getName()} already registered")
         }
-        if (!acceptingNew) {
-            throw IllegalStateException("No longer accepting new effect types")
+        if (handler != null && type is CustomEffectType) {
+            when (type.getBehavior()) {
+                EffectBehavior.INSTANT ->  {
+                    require(handler is InstantEffectHandler) {
+                        "Handler for INSTANT effect must implement InstantEffectHandler"
+                    }
+                }
+                EffectBehavior.DURATION -> {
+                    require(handler is NonInstantEffectHandler) {
+                        "Handler for DURATION effect must implement NonInstantEffectHandler"
+                    }
+                }
+            }
+            handlers[type.getKey()] = handler
         }
         byKey[type.getKey()] = type
         byName[type.getName().lowercase()] = type
-        if (handler != null && type is CustomEffectType) {
-            handlers[type.getKey()] = handler
-        }
+    }
+
+    fun registerInstantEffect(
+        name: String,
+        category: EffectCategory,
+        namespace: String = "customeffect",
+        handler: InstantEffectHandler? = null
+    ): InstantEffectType{
+        val type = InstantEffectType.create(name, category, namespace)
+        registerEffectType(type, handler)
+        return type
+    }
+
+    fun registerNonInstantEffect (
+        name: String,
+        category: EffectCategory,
+        namespace: String = "customeffect",
+        handler: NonInstantEffectHandler? = null
+    ): NonInstantEffectType {
+        val type = NonInstantEffectType.create(name, category, namespace)
+        registerEffectType(type, handler)
+        return type
     }
 
     @NotNull
@@ -80,8 +112,4 @@ object EffectTypes {
 
     @NotNull
     fun getHandler(type: EffectType): CustomEffectHandler? = handlers[type.getKey()]
-
-    fun stopAcceptingRegistrations() {
-        acceptingNew = false
-    }
 }

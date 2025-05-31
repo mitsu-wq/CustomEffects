@@ -15,13 +15,14 @@ class WrappedPotionEffectType(
     override fun getName(): String = potionEffectType.name
 
     @NotNull
-    override fun getCategory(): Category = when (potionEffectType.effectCategory) {
-        PotionEffectType.Category.BENEFICIAL -> Category.BENEFICIAL
-        PotionEffectType.Category.HARMFUL -> Category.HARMFUL
-        else -> Category.NEUTRAL
+    override fun getCategory(): EffectCategory = when (potionEffectType.effectCategory) {
+        PotionEffectType.Category.BENEFICIAL -> EffectCategory.BENEFICIAL
+        PotionEffectType.Category.HARMFUL -> EffectCategory.HARMFUL
+        else -> EffectCategory.NEUTRAL
     }
 
-    override fun isInstant(): Boolean = potionEffectType.isInstant
+    @NotNull
+    override fun getBehavior(): EffectBehavior = if (potionEffectType.isInstant) EffectBehavior.INSTANT else EffectBehavior.DURATION
 
     @NotNull
     override fun translationKey(): String = potionEffectType.translationKey()

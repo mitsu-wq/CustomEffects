@@ -1,12 +1,12 @@
 package me.deadybbb.customeffects.handlers
 
-import me.deadybbb.customeffects.Effect
+import me.deadybbb.customeffects.types.Effect
 import org.bukkit.attribute.Attribute
 import org.bukkit.attribute.AttributeModifier
 import org.bukkit.entity.LivingEntity
 import java.util.UUID
 
-class HeartFillEffectHandler : CustomEffectHandler {
+class HeartFillEffectHandler : NonInstantEffectHandler {
     private val modiferMap = mutableMapOf<LivingEntity, AttributeModifier>()
 
     override fun applyEffect(

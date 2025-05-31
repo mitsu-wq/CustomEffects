@@ -12,7 +12,8 @@ interface EffectType : Translatable {
     fun getName(): String
 
     @NotNull
-    fun getCategory(): Category
+    fun getCategory(): EffectCategory
 
-    fun isInstant(): Boolean
+    @NotNull
+    fun getBehavior(): EffectBehavior
 }

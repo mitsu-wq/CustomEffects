@@ -1,8 +1,9 @@
 package me.deadybbb.customeffects.handlers
 
 import me.deadybbb.customeffects.CustomEffects
-import me.deadybbb.customeffects.Effect
+import me.deadybbb.customeffects.types.Effect
 import me.deadybbb.customeffects.types.CustomEffectType
+import me.deadybbb.customeffects.types.EffectBehavior
 import me.deadybbb.customeffects.types.EffectTypes
 import me.deadybbb.customeffects.types.WrappedPotionEffectType
 import org.bukkit.Bukkit
@@ -25,6 +26,10 @@ class EffectsManager(
     }
 
     fun applyEffect(entity: LivingEntity, effect: Effect) {
+        if (!entity.isValid) {
+            plugin.logger.warning("Cannot apply effect to invalid entity")
+            return
+        }
         removeEffect(entity, effect)
 
         val task = plugin.server.scheduler.runTaskLater(plugin, Runnable {
@@ -32,7 +37,11 @@ class EffectsManager(
                 is WrappedPotionEffectType -> {
                     val potionType = PotionEffectType.getByKey(effect.type.getKey())
                     if (potionType != null) {
-                        entity.addPotionEffect(PotionEffect(potionType, if (effect.type.isInstant()) 1 else effect.duration, effect.amplifier - 1))
+                        entity.addPotionEffect(PotionEffect(
+                            potionType,
+                            if (effect.type.getBehavior() == EffectBehavior.INSTANT) 1 else effect.duration,
+                            effect.amplifier - 1
+                        ))
                     } else {
                         plugin.logger.warning("Potion effect type ${effect.type.getKey()} not found")
                     }
@@ -43,7 +52,7 @@ class EffectsManager(
                 }
             }
 
-            if (!effect.type.isInstant()) {
+            if (effect.type.getBehavior() == EffectBehavior.DURATION) {
                 val removalTask = plugin.server.scheduler.runTaskLater(plugin, Runnable {
                     removeEffect(entity, effect)
                 }, effect.duration.toLong())
@@ -51,7 +60,9 @@ class EffectsManager(
             }
         }, effect.stageTime.toLong())
 
-        activeEffects.getOrPut(entity) { mutableMapOf() }[effect] = task
+        if (effect.type.getBehavior() == EffectBehavior.DURATION) {
+            activeEffects.getOrPut(entity) { mutableMapOf() }[effect] = task
+        }
     }
 
     fun removeEffect(entity: LivingEntity, effect: Effect) {
@@ -66,7 +77,9 @@ class EffectsManager(
                 }
             }
             is CustomEffectType -> {
-                EffectTypes.getHandler(effect.type)?.removeEffect(entity, effect)
+                if (effect.type.getBehavior() == EffectBehavior.DURATION) {
+                    EffectTypes.getHandler(effect.type)?.removeEffect(entity, effect)
+                }
             }
         }
     }
@@ -82,7 +95,9 @@ class EffectsManager(
                     }
                 }
                 is CustomEffectType -> {
-                    EffectTypes.getHandler(effect.type)?.removeEffect(entity, effect)
+                    if (effect.type.getBehavior() == EffectBehavior.DURATION) {
+                        EffectTypes.getHandler(effect.type)?.removeEffect(entity, effect)
+                    }
                 }
             }
         }

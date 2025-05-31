@@ -1,5 +1,7 @@
 package me.deadybbb.customeffects
 
+import me.deadybbb.customeffects.types.Effect
+import me.deadybbb.customeffects.types.EffectBehavior
 import me.deadybbb.customeffects.types.EffectTypes
 import me.deadybbb.ybbbbasicmodule.BasicConfigHandler
 import org.bukkit.NamespacedKey
@@ -27,12 +29,17 @@ class EffectsConfigHandler(
             }
 
             try {
-                effects.add(Effect(
-                    type = type,
-                    stageTime = section.getInt("stage-time", 1),
-                    duration = section.getInt("duration", if (type.isInstant()) 1 else 20),
-                    amplifier = section.getInt("amplifier", 1)
-                ))
+                if (type.getBehavior() == EffectBehavior.INSTANT && section.contains("duration")) {
+                    cplugin.logger.warning("Duration specified for INSTANT effect $effectKey is ignored")
+                }
+                effects.add(
+                    Effect(
+                        type = type,
+                        stageTime = section.getInt("stage-time", 1),
+                        duration = section.getInt("duration", if (type.getBehavior() == EffectBehavior.INSTANT) 1 else 20),
+                        amplifier = section.getInt("amplifier", 1)
+                    )
+                )
             } catch (e: IllegalArgumentException) {
                 cplugin.logger.warning("Invalid configuration for effect $effectKey: ${e.message}")
             }

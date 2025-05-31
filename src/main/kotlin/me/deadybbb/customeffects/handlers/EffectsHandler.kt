@@ -1,7 +1,7 @@
 package me.deadybbb.customeffects.handlers
 
 import me.deadybbb.customeffects.CustomEffects
-import me.deadybbb.customeffects.Effect
+import me.deadybbb.customeffects.types.Effect
 import me.deadybbb.customeffects.EffectsConfigHandler
 import org.bukkit.Bukkit
 import org.bukkit.entity.LivingEntity

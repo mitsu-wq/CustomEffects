@@ -2,7 +2,7 @@ package me.deadybbb.customeffects.types
 
 import net.kyori.adventure.text.format.NamedTextColor
 
-enum class Category(
+enum class EffectCategory(
     val color: NamedTextColor
 ) {
     BENEFICIAL(NamedTextColor.BLUE),
