@@ -1,27 +1,47 @@
 package me.deadybbb.customeffects.types
 
 import me.deadybbb.customeffects.handlers.CustomEffectHandler
+import me.deadybbb.customeffects.handlers.DurationEffectHandler
 import me.deadybbb.customeffects.handlers.HeartDrainEffectHandler
 import me.deadybbb.customeffects.handlers.HeartFillEffectHandler
 import me.deadybbb.customeffects.handlers.InstantEffectHandler
 import me.deadybbb.customeffects.handlers.InstantHeartDrainEffectHandler
 import me.deadybbb.customeffects.handlers.InstantHeartFillEffectHandler
-import me.deadybbb.customeffects.handlers.NonInstantEffectHandler
+import me.deadybbb.customeffects.handlers.PeriodicEffectHandler
 import org.bukkit.NamespacedKey
 import org.bukkit.potion.PotionEffectType
-import org.jetbrains.annotations.NotNull
 import java.util.concurrent.ConcurrentHashMap
 
-object EffectTypes {
+/**
+ * Registry for all effect types and their associated handlers.
+ */
+object EffectTypesRegistry {
     private val byKey = ConcurrentHashMap<NamespacedKey, EffectType>()
     private val byName = ConcurrentHashMap<String, EffectType>()
     private val handlers = ConcurrentHashMap<NamespacedKey, CustomEffectHandler>()
 
-    val HEART_DRAIN = NonInstantEffectType.create(name = "heart_drain", category = EffectCategory.HARMFUL).also { registerEffectType(it, HeartDrainEffectHandler()) }
-    val HEART_FILL = NonInstantEffectType.create(name = "heart_fill", category = EffectCategory.BENEFICIAL).also { registerEffectType(it, HeartFillEffectHandler()) }
-    val INSTANT_HEART_DRAIN = InstantEffectType.create(name = "instant_heart_drain", category = EffectCategory.HARMFUL).also { registerEffectType(it, InstantHeartDrainEffectHandler()) }
-    val INSTANT_HEART_FILL = InstantEffectType.create(name = "instant_heart_fill", category = EffectCategory.BENEFICIAL).also { registerEffectType(it, InstantHeartFillEffectHandler()) }
+    // Custom effect types
+    val HEART_DRAIN = CustomEffectType.createDuration(
+        name = "heart_drain",
+        category = EffectCategory.HARMFUL
+    ).also { registerEffectType(it, HeartDrainEffectHandler()) }
 
+    val HEART_FILL = CustomEffectType.createDuration(
+        name = "heart_fill",
+        category = EffectCategory.BENEFICIAL
+    ).also { registerEffectType(it, HeartFillEffectHandler()) }
+
+    val INSTANT_HEART_DRAIN = CustomEffectType.createInstant(
+        name = "instant_heart_drain",
+        category = EffectCategory.HARMFUL
+    ).also { registerEffectType(it, InstantHeartDrainEffectHandler()) }
+
+    val INSTANT_HEART_FILL = CustomEffectType.createInstant(
+        name = "instant_heart_fill",
+        category = EffectCategory.BENEFICIAL
+    ).also { registerEffectType(it, InstantHeartFillEffectHandler()) }
+
+    // Minecraft potion effect types
     val SPEED = WrappedPotionEffectType(PotionEffectType.SPEED).also { registerEffectType(it) }
     val SLOW = WrappedPotionEffectType(PotionEffectType.SLOW).also { registerEffectType(it) }
     val FAST_DIGGING = WrappedPotionEffectType(PotionEffectType.FAST_DIGGING).also { registerEffectType(it) }
@@ -56,60 +76,138 @@ object EffectTypes {
     val HERO_OF_THE_VILLAGE = WrappedPotionEffectType(PotionEffectType.HERO_OF_THE_VILLAGE).also { registerEffectType(it) }
     val DARKNESS = WrappedPotionEffectType(PotionEffectType.DARKNESS).also { registerEffectType(it) }
 
+    /**
+     * Registers an effect type with an optional handler.
+     *
+     * @param type The effect type to register.
+     * @param handler The handler for custom effect types, if applicable.
+     * @throws IllegalArgumentException if the effect type is already registered or the handler is invalid.
+     */
     fun registerEffectType(type: EffectType, handler: CustomEffectHandler? = null) {
-        if (byKey.containsKey(type.getKey()) || byName.containsKey(type.getName().lowercase())) {
-            throw IllegalArgumentException("Effect with key ${type.getKey()} or name ${type.getName()} already registered")
+        val key = type.getKey()
+        val name = type.getName().lowercase()
+        if (byKey.containsKey(key) || byName.containsKey(name)) {
+            throw IllegalArgumentException("Effect type with key '$key' or name '$name' is already registered")
         }
         if (handler != null && type is CustomEffectType) {
             when (type.getBehavior()) {
-                EffectBehavior.INSTANT ->  {
-                    require(handler is InstantEffectHandler) {
-                        "Handler for INSTANT effect must implement InstantEffectHandler"
-                    }
+                EffectBehavior.INSTANT -> require(handler is InstantEffectHandler) {
+                    "Handler for INSTANT effect must implement InstantEffectHandler"
                 }
-                EffectBehavior.DURATION -> {
-                    require(handler is NonInstantEffectHandler) {
-                        "Handler for DURATION effect must implement NonInstantEffectHandler"
-                    }
+                EffectBehavior.DURATION -> require(handler is DurationEffectHandler) {
+                    "Handler for DURATION effect must implement DurationEffectHandler"
+                }
+                EffectBehavior.PERIODIC -> require(handler is PeriodicEffectHandler) {
+                    "Handler for PERIODIC effect must implement PeriodicEffectHandler"
                 }
             }
-            handlers[type.getKey()] = handler
+            handlers[key] = handler
         }
-        byKey[type.getKey()] = type
-        byName[type.getName().lowercase()] = type
+        byKey[key] = type
+        byName[name] = type
     }
 
+    /**
+     * Registers an instant effect type.
+     *
+     * @param name Unique identifier for the effect type.
+     * @param category The category of the effect.
+     * @param namespace Namespace for the effect type key.
+     * @param handler Optional handler for the effect.
+     * @return The registered Instant effect type.
+     */
     fun registerInstantEffect(
         name: String,
         category: EffectCategory,
         namespace: String = "customeffect",
         handler: InstantEffectHandler? = null
-    ): InstantEffectType{
-        val type = InstantEffectType.create(name, category, namespace)
+    ): CustomEffectType {
+        val type = CustomEffectType.createInstant(name, category, namespace)
         registerEffectType(type, handler)
         return type
     }
 
-    fun registerNonInstantEffect (
+    /**
+     * Registers a duration effect type.
+     *
+     * @param name Unique identifier for the effect type.
+     * @param category The category of the effect.
+     * @param namespace Namespace for the effect type key.
+     * @param handler Optional handler for the effect.
+     * @return The registered Duration effect type.
+     */
+    fun registerDurationEffect(
         name: String,
         category: EffectCategory,
         namespace: String = "customeffect",
-        handler: NonInstantEffectHandler? = null
-    ): NonInstantEffectType {
-        val type = NonInstantEffectType.create(name, category, namespace)
+        handler: DurationEffectHandler? = null
+    ): CustomEffectType {
+        val type = CustomEffectType.createDuration(name, category, namespace)
         registerEffectType(type, handler)
         return type
     }
 
-    @NotNull
-    fun getByKey(key: NamespacedKey?): EffectType? = byKey[key]
+    /**
+     * Registers a periodic effect type.
+     *
+     * @param name Unique identifier for the effect type.
+     * @param category The category of the effect.
+     * @param namespace Namespace for the effect type key.
+     * @param handler Optional handler for the effect.
+     * @return The registered Periodic effect type.
+     */
+    fun registerPeriodicEffect(
+        name: String,
+        category: EffectCategory,
+        namespace: String = "customeffect",
+        handler: PeriodicEffectHandler? = null
+    ): CustomEffectType {
+        val type = CustomEffectType.createPeriodic(name, category, namespace)
+        registerEffectType(type, handler)
+        return type
+    }
 
-    @NotNull
+    /**
+     * Unregisters an effect type.
+     *
+     * @param key The NamespacedKey of the effect type to unregister.
+     * @return True if the effect type was unregistered, false if it was not found.
+     */
+    fun unregisterEffectType(key: NamespacedKey): Boolean {
+        val type = byKey.remove(key) ?: return false
+        byName.remove(type.getName().lowercase())
+        handlers.remove(key)
+        return true
+    }
+
+    /**
+     * Retrieves an effect type by its NamespacedKey.
+     *
+     * @param key The NamespacedKey of the effect type.
+     * @return The EffectType if found, null otherwise.
+     */
+    fun getByKey(key: NamespacedKey?): EffectType? = key?.let { byKey[it] }
+
+    /**
+     * Retrieves an effect type by its name.
+     *
+     * @param name The name of the effect type (case-insensitive).
+     * @return The EffectType if found, null otherwise.
+     */
     fun getByName(name: String): EffectType? = byName[name.lowercase()]
 
-    @NotNull
+    /**
+     * Returns all registered effect types.
+     *
+     * @return Array of all registered EffectType instances.
+     */
     fun values(): Array<EffectType> = byKey.values.toTypedArray()
 
-    @NotNull
+    /**
+     * Retrieves the handler for an effect type.
+     *
+     * @param type The effect type.
+     * @return The associated CustomEffectHandler, or null if none exists.
+     */
     fun getHandler(type: EffectType): CustomEffectHandler? = handlers[type.getKey()]
 }

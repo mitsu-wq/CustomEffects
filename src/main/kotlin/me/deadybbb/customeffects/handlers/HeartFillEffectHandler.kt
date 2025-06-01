@@ -6,7 +6,7 @@ import org.bukkit.attribute.AttributeModifier
 import org.bukkit.entity.LivingEntity
 import java.util.UUID
 
-class HeartFillEffectHandler : NonInstantEffectHandler {
+class HeartFillEffectHandler : DurationEffectHandler {
     private val modiferMap = mutableMapOf<LivingEntity, AttributeModifier>()
 
     override fun applyEffect(
